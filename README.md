@@ -1,109 +1,99 @@
-# RH Folha | Gestão de Recursos Humanos e Folha de Pagamento
+# RH Folha
 
-![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
-![MySQL](https://img.shields.io/badge/mysql-%234479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+Sistema desktop de RH que calcula a folha de pagamento sozinho: **INSS progressivo faixa a faixa, IRRF sobre a base depois do INSS e desconto de vale-transporte limitado a 6%**. Feito em Java com Swing, MySQL e JDBC.
 
-## 📖 Sobre o Projeto
+![Java](https://img.shields.io/badge/Java_17+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL_8-4479A1?style=flat-square&logo=mysql&logoColor=white)
 
-O **RH Folha** é um sistema corporativo desenvolvido para solucionar problemas reais de departamento pessoal: a complexidade matemática e o risco de erros manuais no fechamento da folha de pagamento. 
+![Folha de pagamento gerada pelo sistema](docs/folha.png)
 
-Em vez de depender de planilhas descentralizadas, o sistema centraliza o cadastro de funcionários, departamentos e cargos em um banco de dados relacional (MySQL), e atua como um motor de cálculo automatizado. O grande diferencial desta aplicação é a **fidelidade às regras de negócio e leis trabalhistas**, implementando lógicas exatas para:
-*   **Tributação Progressiva (INSS):** O algoritmo particiona o salário base e aplica as diferentes alíquotas exatamente como a tabela oficial do governo, somando as parcelas para o desconto final.
-*   **Imposto de Renda (IRRF):** Cálculo automatizado considerando a base pós-INSS e aplicando a dedução legal de forma exata.
-*   **Benefícios:** Parametrização e desconto automático do teto de 6% para Vale-Transporte e adição do Vale-Alimentação.
+| Holerite | Funcionários |
+| :---: | :---: |
+| ![Holerite de um funcionário](docs/holerite.png) | ![Cadastro de funcionários](docs/funcionarios.png) |
 
-O foco da arquitetura foi garantir a exatidão financeira (utilizando `BigDecimal` para evitar erros de arredondamento) e a integridade dos dados (bloqueando a geração duplicada de holerites no mesmo mês de referência).
+*Valores calculados pelo próprio sistema; nomes e CPFs de exemplo.*
 
----
+## O que este projeto mostra
 
-## ⚙️ Arquitetura e Funcionalidades
+- **Regra de negócio de verdade:** o INSS é calculado por faixas, como na tabela oficial, e o IRRF usa a base já descontada do INSS. A lógica fica isolada em `util/CalculadoraFolha.java` (`calcularInss`, `calcularIrrf`, `calcularDescontoVt`).
+- **Dinheiro sem erro de arredondamento:** todas as contas usam `BigDecimal`.
+- **Integridade no banco:** uma restrição `UNIQUE (funcionario_id, mes_referencia)` impede gerar duas folhas para o mesmo funcionário no mesmo mês.
+- **Organização em camadas:** `model` (entidades), `dao` (acesso ao banco com `PreparedStatement`), `ui` (telas Swing) e `util`.
 
-- **Motor de Folha de Pagamento:** Geração em lote com cálculos automatizados de INSS progressivo e IRRF.
-- **Precisão Financeira:** Uso exclusivo da classe `BigDecimal` para todas as operações monetárias.
-- **Integridade de Dados:** Implementação de restrições (`UNIQUE constraints`) para impedir a duplicidade de folhas para o mesmo funcionário no mesmo período.
-- **Gestão de Pessoal:** CRUD completo de Departamentos, Cargos e Funcionários. Controle de estado de atividade (admissão/desligamento) preservando o histórico.
-- **Controle de Ponto:** Registro estruturado de férias, atestados e faltas, com reflexo no cálculo final do holerite.
-- **Relatórios Gerenciais:** Extração de métricas de custo total por departamento.
+## Contexto
 
----
+O fechamento da folha é uma das tarefas mais sujeitas a erro num departamento pessoal: o INSS não é uma porcentagem única, e sim uma soma de faixas; o IRRF depende do valor que sobra depois do INSS; e qualquer arredondamento errado vira diferença no holerite. Em vez de planilhas soltas, o RH Folha guarda funcionários, cargos e departamentos num banco relacional e gera a folha do mês de uma vez, com os mesmos critérios para todos.
 
-## 🛠️ Tecnologias Utilizadas
+## Funcionalidades
 
-- **Linguagem:** Java 17+
-- **Interface Gráfica:** Swing (`GridBagLayout` e `JTabbedPane`)
-- **Banco de Dados:** MySQL 8 
-- **Integração e Arquitetura:** JDBC (`java.sql`, `PreparedStatement`), Padrão DAO
-- **Configuração:** Externalização de credenciais via `config.properties`
+- **Departamentos e cargos**, com salário base por cargo.
+- **Funcionários**, com admissão, desligamento (sem apagar o histórico), cargo, departamento e salário.
+- **Ausências:** férias, atestados e faltas por período.
+- **Folha de pagamento:** escolhe o mês e o valor do vale-alimentação e gera a folha de todos os ativos, com bruto, INSS, IRRF, VT, VA e líquido, mais o custo total do mês.
+- **Holerite** de cada funcionário.
+- **Relatórios** de custo por departamento.
 
----
+## Como o cálculo funciona
 
-## 📁 Estrutura do Projeto
+| Etapa | Regra |
+| :--- | :--- |
+| INSS | O salário é dividido nas faixas da tabela; cada pedaço recebe a sua alíquota e as parcelas são somadas. |
+| IRRF | Calculado sobre o salário bruto menos o INSS, com a alíquota e a dedução da faixa. |
+| Vale-transporte | 6% do salário bruto. |
+| Vale-alimentação | Valor informado na geração da folha, somado ao líquido. |
+| Líquido | Bruto − INSS − IRRF − VT + VA. |
 
-A arquitetura do código foi organizada visando a separação de responsabilidades (Clean Code):
+## Estrutura
 
 ```text
-rh-folha/
-├── sql/
-│   └── schema.sql             # Scripts DDL/DML para criação e carga inicial do banco
-├── src/
-│   ├── Main.java              # Entry point da aplicação
-│   ├── config.properties      # Credenciais de conexão (JDBC)
-│   ├── model/                 # Entidades do domínio
-│   ├── dao/                   # Camada de persistência (Padrão DAO)
-│   ├── ui/                    # Telas e componentes gráficos Swing
-│   └── util/
-│       ├── ConexaoFactory.java    # Fábrica de conexões Singleton
-│       └── CalculadoraFolha.java  # Lógica matemática de tributos isolada
-└── README.md
+sql/schema.sql            # cria o banco rh_folha, as tabelas, departamentos e cargos de exemplo
+src/
+├── Main.java
+├── config.properties.example
+├── model/                # Funcionario, Cargo, Departamento, FolhaPagamento, Ausencia, TipoAusencia
+├── dao/                  # um DAO por entidade + RelatorioDAO
+├── ui/                   # TelaPrincipal e as abas: Departamentos, Cargos, Funcionários, Folha, Relatórios
+└── util/
+    ├── ConexaoFactory.java   # lê o config.properties e abre a conexão
+    └── CalculadoraFolha.java # INSS, IRRF e VT
 ```
 
----
+| Tabela | Conteúdo |
+| :--- | :--- |
+| `departamento` | Nome (único). |
+| `cargo` | Nome e salário base. |
+| `funcionario` | Nome, CPF (único), admissão, cargo, departamento, salário e se está ativo. |
+| `folha_pagamento` | Mês, bruto, INSS, IRRF, VT, VA, líquido e data de geração (uma por funcionário por mês). |
+| `ausencia` | Tipo (férias, atestado, falta), período e observação. |
 
-## 🚀 Como Executar
+## Como rodar
 
-### Pré-requisitos
-*   **Java Development Kit (JDK) 17** ou superior.
-*   **MySQL Server 8.0** ou superior em execução.
-*   **Driver JDBC (mysql-connector-j):** Necessário para a conexão com o banco.
+Pré-requisitos: JDK 17+, MySQL 8 e o driver [MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/) (`.jar`).
 
-### Passo 1: Preparando o Banco de Dados
-1. Abra o seu cliente MySQL (MySQL Workbench, DBeaver ou Terminal).
-2. Execute o script `schema.sql` localizado na pasta `sql/`. Ele criará o banco de dados `rh_folha`, as tabelas necessárias e fará a inserção de alguns dados de teste (departamentos e cargos).
+1. Rode `sql/schema.sql` no MySQL (Workbench, DBeaver ou terminal).
+2. Copie `src/config.properties.example` para `src/config.properties` e preencha usuário e senha do seu MySQL.
+3. Rode pela IDE (adicione o `.jar` do Connector/J às bibliotecas e execute `Main.java`) ou pelo terminal, com o `.jar` numa pasta `lib/`:
 
-### Passo 2: Configurando as Credenciais
-1. Navegue até a pasta `src/` e abra o arquivo `config.properties`.
-2. Edite as informações com o usuário e a senha do seu banco de dados local:
-```properties
-db.url=jdbc:mysql://localhost:3306/rh_folha
-db.user=seu_usuario_aqui
-db.password=sua_senha_aqui
-```
-
-### Passo 3: Executando o Projeto
-
-**Opção A: Rodando via IDE (Eclipse, IntelliJ ou VS Code) - *Recomendado***
-1. Importe a pasta do projeto na sua IDE.
-2. Adicione o arquivo `.jar` do `mysql-connector-j` ao *Build Path* (Eclipse) ou *Dependencies* (IntelliJ) do projeto.
-3. Localize a classe `Main.java` na pasta `src/` e execute o projeto.
-
-**Opção B: Rodando via Terminal**
-Certifique-se de que o `.jar` do conector do MySQL está em uma pasta `lib/` na raiz do projeto.
 ```bash
 cd src
-# Compila os arquivos Java
-javac -d ../out -cp ".:../lib/mysql-connector-j-x.x.x.jar" $(find . -name "*.java")
-# Copia as credenciais para a pasta de saída
+javac -d ../out -cp ".:../lib/mysql-connector-j.jar" $(find . -name "*.java")
 cp config.properties ../out/
 cd ../out
-# Executa a aplicação
-java -cp ".:../lib/mysql-connector-j-x.x.x.jar" Main
+java -cp ".:../lib/mysql-connector-j.jar" Main
 ```
 
----
+No Windows, troque `:` por `;` no `-cp`.
 
-## 📈 Roadmap de Evolução
+| Erro | Solução |
+| :--- | :--- |
+| `Não foi possível carregar config.properties` | O arquivo não foi copiado para a pasta `out`. |
+| `Access denied for user` | Usuário ou senha errados no `config.properties`. |
+| `Public Key Retrieval is not allowed` | Acrescente `&allowPublicKeyRetrieval=true` na `db.url`. |
+| `Communications link failure` | O MySQL não está ligado. |
 
-- [ ] Implementação de cálculo de 13º salário e férias proporcionais.
-- [ ] Exportação de holerites para o formato PDF.
-- [ ] Módulo de autenticação com controle de acesso (Gestor de RH vs. Funcionário).
-- [ ] Registro em banco do histórico de reajustes salariais.
+## Próximos passos
+
+- [ ] Testes automatizados (JUnit) para `CalculadoraFolha`
+- [ ] 13º salário e férias proporcionais
+- [ ] Holerite em PDF
+- [ ] Login com perfis (gestor de RH e funcionário)

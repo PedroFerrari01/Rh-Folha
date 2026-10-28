@@ -1,0 +1,6 @@
+# Credenciais locais (nunca publicar)
+src/config.properties
+
+# Compilados
+out/
+*.class
