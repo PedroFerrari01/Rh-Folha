@@ -13,14 +13,11 @@ public class ConexaoFactory {
 
     static {
         try (InputStream in = ConexaoFactory.class.getClassLoader().getResourceAsStream("config.properties")) {
-            if (in != null) {
-                props.load(in);
-            } else {
-                props.setProperty("db.url", "jdbc:mysql://localhost:3306/rh_folha?useSSL=false&serverTimezone=UTC");
-                props.setProperty("db.user", "rh_app");
-                props.setProperty("db.password", "rh123");
-                props.setProperty("db.driver", "com.mysql.cj.jdbc.Driver");
+            if (in == null) {
+                throw new IllegalStateException(
+                        "Arquivo src/config.properties não encontrado. Copie o config.properties.example e preencha com os dados do seu MySQL.");
             }
+            props.load(in);
         } catch (IOException e) {
             throw new RuntimeException("Não foi possível carregar config.properties", e);
         }
