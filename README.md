@@ -94,3 +94,5 @@ No Windows, troque `:` por `;` no `-cp`.
 - [ ] 13º salário e férias proporcionais
 - [ ] Holerite em PDF
 - [ ] Login com perfis (gestor de RH e funcionário)
+- [ ] Maven e GitHub Actions para rodar os testes a cada envio
+- [ ] Versão como API REST com Spring Boot
