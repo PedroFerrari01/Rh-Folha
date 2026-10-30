@@ -1,9 +1,6 @@
-# RH Folha
+<img src="docs/banner.png" alt="RH Folha: folha de pagamento com INSS faixa a faixa, IRRF e vale-transporte. Java, Swing, MySQL e JDBC" width="100%">
 
 Sistema desktop de RH que calcula a folha de pagamento sozinho: **INSS progressivo faixa a faixa, IRRF sobre a base depois do INSS e desconto de vale-transporte limitado a 6%**. Feito em Java com Swing, MySQL e JDBC.
-
-![Java](https://img.shields.io/badge/Java_17+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL_8-4479A1?style=flat-square&logo=mysql&logoColor=white)
 
 ![Folha de pagamento gerada pelo sistema](docs/folha.png)
 
